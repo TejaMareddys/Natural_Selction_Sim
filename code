@@ -1,0 +1,100 @@
+import random
+import numpy as np
+
+POPULATION_SIZE = 50
+CROSSOVER_RATE = 0.8
+MUTATION_RATE = 0.1
+NUM_GENERATIONS = 500
+
+# Cities and their coordinates  5
+cities = [(124, 41), (31, 107), (10, 70), (89, 77), (109, 53), (28, 92), (58, 122), (106, 138), (78, 38), (54, 1)]
+# [(0, 0), (1, 5), (3, 1), (5, 7), (6, 3), (10,4), (2,2), (12,12),
+# (4,-2), (-3, -3), (2,10), (-3, 4), (-5,-5), (-5,6), (-3,15)]
+
+# Distance between two cities
+def distance(city1, city2):
+    x1, y1 = city1
+    x2, y2 = city2
+    return np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    # euclidian distance
+
+# Define the fitness function
+def fitness(individual):
+    total_distance = 0
+    for i in range(len(individual) - 1):
+        total_distance += distance(cities[individual[i]], cities[individual[i+1]])
+    try:
+        return 1 / total_distance
+    except ZeroDivisionError:
+        return float('-inf')
+
+# Define the initial population
+def initialize_population(population_size):
+    population = []
+    for i in range(population_size):
+        individual = list(range(len(cities)))
+        random.shuffle(individual)
+        population.append(individual)
+    return population
+
+# Perform tournament selection to choose parents for crossover
+def tournament_selection(population, fitness_scores, tournament_size):
+    tournament = random.sample(range(len(population)), tournament_size)
+    tournament_fitness = [fitness_scores[i] for i in tournament]
+    winner = tournament[np.argmax(tournament_fitness)]
+    return population[winner]
+
+# Perform crossover to create new offspring
+def crossover(parent1, parent2):
+    child = [-1] * len(parent1)
+    start = random.randint(0, len(parent1) - 1)
+    end = random.randint(start, len(parent1) - 1)
+    for i in range(start, end+1):
+        child[i] = parent1[i]
+    for i in range(len(parent2)):
+        if parent2[i] not in child:
+            for j in range(len(child)):
+                if child[j] == -1:
+                    child[j] = parent2[i]
+                    break
+    return child
+
+# Perform mutation on the offspring
+def mutate(individual, mutation_rate):
+    for i in range(len(individual)):
+        if random.random() < mutation_rate:
+            j = random.randint(0, len(individual) - 1)
+            individual[i], individual[j] = individual[j], individual[i]
+    return individual
+
+# Main loop
+population = initialize_population(POPULATION_SIZE)
+for generation in range(NUM_GENERATIONS):
+    # Evaluate the fitness of each individual
+    fitness_scores = [fitness(individual) for individual in population]
+    # Select the parents for crossover
+    parents = [tournament_selection(population, fitness_scores, 3) for i in range(POPULATION_SIZE)]
+    # Perform crossover and mutation to create new offspring
+    offspring = []
+    for i in range(0, POPULATION_SIZE, 2):
+        parent1 = parents[i]
+        parent2 = parents[i+1]
+        child1 = crossover(parent1, parent2)
+        child2 = crossover(parent2, parent1)
+        child1 = mutate(child1, MUTATION_RATE)
+        child2 = mutate(child2, MUTATION_RATE)
+        offspring.extend([child1, child2])
+    # Replace the old population with the new offspring
+    population = offspring
+
+# Find the best individual and print its fitness and route
+try:
+    # Find the best individual and print its fitness and route
+    best_individual = max(population, key=fitness)
+    best_fitness = fitness(best_individual)
+    best_route = [cities[i] for i in best_individual]
+    print("Best fitness:", best_fitness)
+    print("Best route:", best_route)
+except ValueError:
+    print("No valid routes found.")
+
